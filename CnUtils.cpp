@@ -6,6 +6,7 @@
 #include <CnUtils.h>
 #include <avr/eeprom.h>
 #include <avr/boot.h>
+#include <avr/io.h>
 
 // --------------------------  Magic C++ Functions  --------------------------
 
@@ -71,13 +72,13 @@ void printHexWidth( Print &outs, uint16_t hexValue, uint8_t width )
     switch( width )
     {
         case 5 :
-                if( hexValue <= 9999 ) outs.print( '0' );
+                if( hexValue <= 0x0FFFF ) outs.print( '0' );
         case 4 :
-                if( hexValue <= 999 ) outs.print( '0' );
+                if( hexValue <= 0x0FFF ) outs.print( '0' );
         case 3 :
-                if( hexValue <= 99 ) outs.print( '0' );
+                if( hexValue <= 0x0FF ) outs.print( '0' );
         case 2 :
-                if( hexValue <= 9 ) outs.print( '0' );
+                if( hexValue <= 0x0F ) outs.print( '0' );
                 break;
         default :
                 // handles width of 1 and 0 ...
@@ -136,9 +137,12 @@ void dumpEE( Print &outs, uint16_t eeOffset, uint16_t size )
 
 /***
  *   Read CPU's signature bytes, store to buffer, minimum of 8 bytes.
+ *   If MPU signature cannot be read, returns as 3 zero bytes.
+ *   Arduino 1.5 : __AVR_ATmega328P__ does not define SIGRD.
+ *
  *   @seealso http://electronics.stackexchange.com/questions/31048/can-an-atmega-or-attiny-device-signature-be-read-while-running
  *   @seealso http://electronics.stackexchange.com/questions/58386/how-can-i-detect-which-arduino-board-or-which-controller-in-software/58388#58388
- *   @return actual number of bytes sotred into 'outs', <0 on error.
+ *   @return actual number of bytes stored into 'outs', <0 on error.
  */
 int8_t
 getCpuSignatureBytes( uint8_t * outs, uint8_t size_outs )
@@ -150,10 +154,17 @@ getCpuSignatureBytes( uint8_t * outs, uint8_t size_outs )
     outs[0] = highByte( VENDOR_ID_ATMEL );
     outs[1] = lowByte( VENDOR_ID_ATMEL );
 
+#if defined (__AVR_ATmega328P__) && !defined(SIGRD)
+//  missing bit in "define SPMCSR _SFR_IO8(0x37)"
+    outs[2] = 0;
+    outs[3] = 0;
+    outs[4] = 0;
+#else
     /* this code is very Arduino specific. */
     outs[2] = boot_signature_byte_get( 0 );
     outs[3] = boot_signature_byte_get( 1 );
     outs[4] = boot_signature_byte_get( 2 );
+#endif
 
     return( 5 );
 }   /* end getCpuSignatureBytes() */
