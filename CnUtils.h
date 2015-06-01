@@ -33,6 +33,21 @@ template <class TKey, class TValue> struct KeyValuePair
 };
 
 
+// --------------------------  Magic C++ Functions  --------------------------
+
+/***
+ *   Allow Print-things, e.g. HardwareSerial, to print a prefix string, a number,
+ *   and a suffix-string.
+ *
+ *   I would love if C++ had extension classes like C#.  I looked at IO stream
+ *   overloads but could not get it to work.  I want to see this:
+ *      Serial.print3( "open==", 5, "==close" );
+ *
+ */
+template< typename MiddleType >
+void print3( Print& p, const char * first, MiddleType val, const char * last );
+
+
 // ---------------------------  Helpers Functions  ---------------------------
 
 /***
@@ -44,12 +59,19 @@ static inline uint8_t map( uint8_t value, uint8_t fromLow, uint8_t fromHigh, uin
 }
 
 //-----------------------
-//  Get the available ram
+//  Get the available ram size, i.e. memory not yet claimed by malloc().
+//  This is measurement of current "top of heap".  If there are holes inside
+//  the heap, then more than freeRam() can be allocated.
 //-----------------------
 extern size_t     freeRam();
 
 extern void       printHexWidth( Print &outs, uint16_t hexValue, uint8_t width );
 
-extern void       dumpEE( Print &outs, uint16_t offset, uint16_t size );
+extern void       dumpEE( Print &outs, uint16_t eeOffset, uint16_t size );
+
+/*** Read CPU's signature bytes, store to buffer, returns actual stored count as return value */
+extern int8_t     getCpuSignatureBytes( uint8_t * outs, uint8_t size_outs );
+#define VENDOR_ID_ATMEL   0x1114
+#define VENDOR_ID_FREESCALE   _needs_a_value_
 
 #endif

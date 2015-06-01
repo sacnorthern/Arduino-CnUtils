@@ -5,19 +5,56 @@
 
 #include <CnUtils.h>
 #include <avr/eeprom.h>
+#include <avr/boot.h>
+
+// --------------------------  Magic C++ Functions  --------------------------
+
+/// C:\Users\brian\Documents\Arduino\libraries\CnUtils\CnUtils.cpp:16: error: too few template-parameter-lists
+
+template<>
+void print3<unsigned char>( Print& outs, const char * first, unsigned char val, const char * last )
+{
+    outs.print( first);
+    outs.print( val, DEC );
+    outs.print( last );
+}
+
+template<>
+void print3<unsigned int>( Print& outs, const char * first, unsigned int val, const char * last )
+{
+    outs.print( first);
+    outs.print( val, DEC );
+    outs.print( last );
+}
+
+template<>
+void print3<int>( Print& outs, const char * first, int val, const char * last )
+{
+    outs.print( first);
+    outs.print( val, DEC );
+    outs.print( last );
+}
+
+template<>
+void print3<const char *>( Print& outs, const char * first, const char * val, const char * last )
+{
+    outs.print( first);
+    outs.print( val );
+    outs.print( last );
+}
 
 
 /* ------------------------------------------------------------------- */
 
 //------------------------
-//  Get the available ram
+//  Get the available ram size.
+//  @see http://playground.arduino.cc/Code/AvailableMemory#.UxO0Vq5lO4o
 //------------------------
 size_t freeRam()
 {
-  // Defined in "malloc.c".
   extern char   __heap_start, *__brkval;        // from "malloc.c"
   auto int      tos;
-  return PTR2INT( &tos ) - (__brkval == 0 ? PTR2INT( &__heap_start ) : PTR2INT(__brkval));
+  return PTR2INT( &tos ) - ((__brkval == 0) ? PTR2INT( &__heap_start ) : PTR2INT(__brkval));
 }  // FREE RAM
 
 
@@ -56,10 +93,10 @@ void printHexWidth( Print &outs, uint16_t hexValue, uint8_t width )
 
 /***
  *   Dump a section EE-memory to 'outs'.  Bytes are read using
- *       eeprom_read_byte( offset++ )
+ *       eeprom_read_byte( eeOffset++ )
  *   until 'size' bytes have been processed.
  */
-void dumpEE( Print &outs, uint16_t offset, uint16_t size )
+void dumpEE( Print &outs, uint16_t eeOffset, uint16_t size )
 {
     char  ascii[ 16 + 1 ];
     uint8_t  j;
@@ -69,12 +106,12 @@ void dumpEE( Print &outs, uint16_t offset, uint16_t size )
     {
         strcpy( ascii, "................" );
 
-        printHexWidth( outs, offset, 3 );
+        printHexWidth( outs, eeOffset, 3 );
         outs.print( " : " );
 
-        for( j = 0 ; j < DUMP_WIDTH && size > 0 ; ++j, --size, ++offset )
+        for( j = 0 ; j < DUMP_WIDTH && size > 0 ; ++j, --size, ++eeOffset )
         {
-            b = eeprom_read_byte( (const uint8_t *) offset );
+            b = eeprom_read_byte( (const uint8_t *) eeOffset );
             printHexWidth( outs, b, 2 );
 
             outs.print( ' ' );
@@ -93,4 +130,31 @@ void dumpEE( Print &outs, uint16_t offset, uint16_t size )
     }
 
 }   /* end EeValues::dumpEE() */
+
+#undef DUMP_WIDTH
+
+
+/***
+ *   Read CPU's signature bytes, store to buffer, minimum of 8 bytes.
+ *   @seealso http://electronics.stackexchange.com/questions/31048/can-an-atmega-or-attiny-device-signature-be-read-while-running
+ *   @seealso http://electronics.stackexchange.com/questions/58386/how-can-i-detect-which-arduino-board-or-which-controller-in-software/58388#58388
+ *   @return actual number of bytes sotred into 'outs', <0 on error.
+ */
+int8_t
+getCpuSignatureBytes( uint8_t * outs, uint8_t size_outs )
+{
+
+    if( size_outs < 5 )
+        return (int8_t) -1;
+
+    outs[0] = highByte( VENDOR_ID_ATMEL );
+    outs[1] = lowByte( VENDOR_ID_ATMEL );
+
+    /* this code is very Arduino specific. */
+    outs[2] = boot_signature_byte_get( 0 );
+    outs[3] = boot_signature_byte_get( 1 );
+    outs[4] = boot_signature_byte_get( 2 );
+
+    return( 5 );
+}   /* end getCpuSignatureBytes() */
 
