@@ -63,9 +63,9 @@ size_t freeRam()
 
 /***
  *   Format a fixed-width HEX value with leading zeroes.
+ *   If value smaller than the field, extra 'hexValue' digits are print()-ed.
  *   Handles max-size of 2 bytes on hex value and 'width' max of 5.
  *   Calls "outs.print( uint16_t, HEX )" to display the value.
- *   If value larger than the field, extra 'hexValue' digits are print()-ed.
  */
 void printHexWidth( Print &outs, uint16_t hexValue, uint8_t width )
 {
@@ -93,7 +93,7 @@ void printHexWidth( Print &outs, uint16_t hexValue, uint8_t width )
 #define DUMP_WIDTH  8
 
 /***
- *   Dump a section EE-memory to 'outs'.  Bytes are read using
+ *   Dump a section EE-memory to 'outs'.  Bytes are read using:
  *       eeprom_read_byte( eeOffset++ )
  *   until 'size' bytes have been processed.
  */
